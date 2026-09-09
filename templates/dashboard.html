@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mpofu Enterprise - Live Operations ERP</title>
+    <style>
+        /* Modern Dark Theme Structural Design Rules */
+        body {
+            background-color: #030712;
+            color: #f3f4f6;
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100-vh;
+        }
+        header {
+            background-color: #111827;
+            border-b: 1px solid #1f2937;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            color: #3b82f6;
+            margin: 0;
+            font-size: 24px;
+            letter-spacing: 1px;
+        }
+        header p {
+            color: #9ca3af;
+            margin: 4px 0 0 0;
+            font-size: 13px;
+        }
+        .status-badge {
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 6px 14px;
+            rounded-radius: 9999px;
+            border-radius: 20px;
+        }
+        .main-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            padding: 30px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        section {
+            background-color: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #374151;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+        .section-header h2 {
+            margin: 0;
+            font-size: 16px;
+            letter-spacing: 0.5px;
+        }
+        .cards-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        /* Custom Interactive Order Cards */
+        .order-card {
+            background-color: #111827;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+        .order-card:hover {
+            border-color: #4b5563;
+        }
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .token-lbl {
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .type-tag {
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            background-color: #374151;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #d1d5db;
+        }
+        .client-name {
+            margin: 0 0 6px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .items-desc {
+            font-size: 13px;
+            color: #9ca3af;
+            margin: 0 0 16px 0;
+        }
+        .action-btn {
+            width: 100%;
+            border: none;
+            color: white;
+            padding: 10px;
+            font-weight: bold;
+            font-size: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: background 0.2s;
+        }
+        .btn-kitchen { background-color: #ea580c; }
+        .btn-kitchen:hover { background-color: #f97316; }
+        .btn-dispatch { background-color: #2563eb; }
+        .btn-dispatch:hover { background-color: #3b82f6; }
+        .btn-complete { background-color: #059669; }
+        .btn-complete:hover { background-color: #10b981; }
+
+        /* Revenue Box */
+        .revenue-display {
+            background-color: #111827;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 20px;
+            text-center: center;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .revenue-display p {
+            margin: 0 0 4px 0;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #9ca3af;
+            letter-spacing: 1px;
+        }
+        .revenue-display h3 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 800;
+            color: #10b981;
+            font-family: monospace;
+        }
+        .ledger-row {
+            background-color: #111827;
+            border: 1px solid #1f2937;
+            padding: 10px 14px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: monospace;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <h1>MPOFU ENTERPRISE RESTAURANT</h1>
+            <p>Live Cross-Department Synchronization ERP Control Board</p>
+        </div>
+        <div class="status-badge">
+            ● BACKEND LOCAL SERVER CLOUD ONLINE
+        </div>
+    </header>
+
+    <div class="main-container">
+
+        <!-- KITCHEN PREPARATION QUEUE -->
+        <section>
+            <div class="section-header">
+                <h2 style="color: #f97316;">🍳 KITCHEN PREPARATION</h2>
+                <span style="font-size: 12px; color: #f97316;" id="kitchen-count">0 Tickets</span>
+            </div>
+            <div id="kitchen-cards-container" class="cards-list">
+                <div style="color: #6b7280; font-size: 13px;">Polling system data sync pipelines...</div>
+            </div>
+        </section>
+
+        <!-- COURIER DISPATCH DESK -->
+        <section>
+            <div class="section-header">
+                <h2 style="color: #3b82f6;">🚚 COURIER DISPATCH DESK</h2>
+            </div>
+            <div id="dispatch-cards-container" class="cards-list">
+                <div style="color: #6b7280; font-size: 13px;">Waiting for ready kitchen tickets...</div>
+            </div>
+        </section>
+
+        <!-- ADMINISTRATIVE REVENUE LEDGER -->
+        <section>
+            <div class="section-header">
+                <h2 style="color: #10b981;">📊 MANAGER FINANCIAL LEDGER</h2>
+            </div>
+            <div class="revenue-display">
+                <p>Gross Cumulative Revenue</p>
+                <h3 id="gross-revenue">$0.00</h3>
+            </div>
+            <div style="font-size: 11px; text-transform: uppercase; color: #9ca3af; letter-spacing: 0.5px; margin-bottom: 10px; font-weight: bold;">System Transactions Log</div>
+            <div id="admin-ledger-container" style="max-height: 380px; overflow-y: auto;">
+                <!-- Logs entry mapping -->
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        async function fetchSystemData() {
+            try {
+                const response = await fetch('/admin/dashboard/transactions?username=admin');
+                const data = await response.json();
+                
+                if (data.access_granted) {
+                    document.getElementById('gross-revenue').innerText = data.gross_system_revenue;
+                    
+                    const kitchenContainer = document.getElementById('kitchen-cards-container');
+                    const dispatchContainer = document.getElementById('dispatch-cards-container');
+                    const ledgerContainer = document.getElementById('admin-ledger-container');
+                    
+                    kitchenContainer.innerHTML = "";
+                    dispatchContainer.innerHTML = "";
+                    ledgerContainer.innerHTML = "";
+
+                    let kitchenCount = 0;
+
+                    data.detailed_ledger.forEach(order => {
+                        const logRow = document.createElement('div');
+                        logRow.className = "ledger-row";
+                        logRow.innerHTML = `<div><span style="color: #3b82f6; font-weight: bold;">${order.receipt}</span> | ${order.client}</div> <div style="color: #10b981; font-weight: bold;">$${order.total.toFixed(2)}</div>`;
+                        ledgerContainer.appendChild(logRow);
+
+                        if (order.status === "pending" || order.status === "in_kitchen") {
+                            kitchenCount++;
+                            const card = document.createElement('div');
+                            card.className = "order-card";
+                            card.innerHTML = `
+                                <div class="card-top">
+                                    <span class="token-lbl" style="color: #f97316;">${order.receipt}</span>
+                                    <span class="type-tag">${order.type}</span>
+                                </div>
+                                <h4 class="client-name">${order.client}</h4>
+                                <p class="items-desc">Items: <span style="color: #e5e7eb;">${order.items_summary}</span></p>
+                                <button onclick="advanceOrderStatus('${order.receipt}', 'ready_for_dispatch')" class="action-btn btn-kitchen">Mark Food Ready</button>
+                            `;
+                            kitchenContainer.appendChild(card);
+                        }
+                        
+                        if (order.status === "ready_for_dispatch" || order.status === "out_for_delivery") {
+                            const card = document.createElement('div');
+                            card.className = "order-card";
+                            let dispatchButton = "";
+                            if (order.status === "ready_for_dispatch") {
+                                dispatchButton = `<button onclick="assignDriver('${order.receipt}')" class="action-btn btn-dispatch">Assign Driver Alex</button>`;
+                            } else {
+                                dispatchButton = `<button onclick="advanceOrderStatus('${order.receipt}', 'completed')" class="action-btn btn-complete">Confirm Handover Dropoff</button>`;
+                            }
+                            card.innerHTML = `
+                                <div class="card-top">
+                                    <span class="token-lbl" style="color: #3b82f6;">${order.receipt}</span>
+                                    <span class="type-tag" style="background-color: #1e3a8a; color: #93c5fd;">${order.status.replace(/_/g, ' ')}</span>
+                                </div>
+                                <h4 class="client-name">${order.client}</h4>
+                                <div style="margin-top: 10px;">${dispatchButton}</div>
+                            `;
+                            dispatchContainer.appendChild(card);
+                        }
+                    });
+                    document.getElementById('kitchen-count').innerText = `${kitchenCount} Tickets`;
+                }
+            } catch (err) {
+                console.error("Sync error:", err);
+            }
+        }
+
+        async function advanceOrderStatus(token, status) {
+            await fetch(`/orders/${token}/update-status?new_status=${status}`, { method: 'PATCH' });
+            fetchSystemData();
+        }
+
+        async function assignDriver(token) {
+            await fetch(`/dispatch/assign/${token}?driver_name=Alex`, { method: 'POST' });
+            fetchSystemData();
+        }
+
+        setInterval(fetchSystemData, 2000);
+        window.onload = fetchSystemData;

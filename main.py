@@ -1,13 +1,18 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 import database as db
 import uuid
-from datetime import datetime
+import datetime
 
 app = FastAPI(title="Smart Restaurant Cloud ERP System")
 
 # Initialize database schemas on startup automatically
 db.init_db()
+
+# Mount HTML templates layout directory
+templates = Jinja2Templates(directory="templates")
 
 # DB Dependency link session
 def get_db():
@@ -31,7 +36,15 @@ def verify_manager_access(username: str = "admin"):
 def read_root():
     return {"status": "ONLINE", "system": "Restaurant POS & ERP Engine Active"}
 
-# ----------------- PIPELINE ENDPOINTS -----------------
+@app.get("/dashboard", response_class=HTMLResponse)
+def render_live_operations_board(request: Request):
+    """Brings up the multi-column synchronized graphical user interface dashboard web page."""
+    return templates.TemplateResponse(request, "dashboard.html")
+
+
+
+
+# ----------------- ORDER PIPELINE ENDPOINTS -----------------
 
 @app.post("/orders/create", status_code=status.HTTP_201_CREATED)
 def place_new_order(client: str, o_type: db.OrderType, items: str, dbs: Session = Depends(get_db)):
@@ -44,7 +57,6 @@ def place_new_order(client: str, o_type: db.OrderType, items: str, dbs: Session 
     dbs.refresh(new_order)
     
     calc_total = 0.0
-    # Clean up the incoming item text string (e.g., "Pizza, Burger" -> ["Pizza", "Burger"])
     item_list = [i.strip() for i in items.split(",") if i.strip()]
     
     for item_name in item_list:
@@ -66,7 +78,6 @@ def place_new_order(client: str, o_type: db.OrderType, items: str, dbs: Session 
         "total_bill": f"${new_order.total_price:.2f}"
     }
 
-
 @app.get("/orders/{receipt_token}/receipt")
 def generate_printable_receipt(receipt_token: str, dbs: Session = Depends(get_db)):
     """Generates a beautifully formatted terminal/printer receipt text summary for clients and dispatchers."""
@@ -74,7 +85,6 @@ def generate_printable_receipt(receipt_token: str, dbs: Session = Depends(get_db
     if not order:
         raise HTTPException(status_code=404, detail="Receipt verification token not found.")
     
-    # Build text block string mapping layout items itemized line by line
     border = "========================================\n"
     header = "       MPOFU ENTERPRISE RESTAURANT      \n"
     meta_info = f" Receipt: {order.receipt_token}\n Type: {order.order_type.upper()} | Status: {order.status.upper()}\n Client: {order.client_name}\n"
@@ -107,20 +117,6 @@ def update_order_state(receipt_token: str, new_status: str, dbs: Session = Depen
     dbs.commit()
     return {"status": "SUCCESS", "receipt": receipt_token, "new_operational_state": target_order.status}
 
-# ----------------- ADMIN GATED METRICS -----------------
-
-@app.get("/admin/dashboard/transactions")
-def get_all_transactions(username: str = "client", is_manager: bool = Depends(verify_manager_access), dbs: Session = Depends(get_db)):
-    """A highly secure route that allows ONLY managers to pull financial data totals across departments."""
-    all_orders = dbs.query(db.Order).all()
-    gross_revenue = sum(o.total_price for o in all_orders)
-    return {
-        "access_granted": True,
-        "total_orders_processed": len(all_orders),
-        "gross_system_revenue": f"${gross_revenue:.2f}",
-        "detailed_ledger": [{"receipt": o.receipt_token, "client": o.client_name, "total": o.total_price, "type": o.order_type} for o in all_orders]
-    }
-
 # ----------------- DISPATCH & DELIVERY TRACKING ENDPOINTS -----------------
 
 @app.post("/dispatch/assign/{receipt_token}")
@@ -132,16 +128,13 @@ def assign_order_to_driver(receipt_token: str, driver_name: str, dbs: Session = 
     if order.order_type.value != db.OrderType.DELIVERY.value:
         raise HTTPException(status_code=400, detail="Action error: This order is marked as Dine-In.")
         
-    # Check if this order is already dispatched to prevent data overlap
     existing_log = dbs.query(db.DispatchLog).filter(db.DispatchLog.order_id == order.id).first()
     if existing_log:
         return {"status": "ALREADY_DISPATCHED", "driver": existing_log.driver_name, "time": existing_log.dispatched_at}
 
-    # 1. Create a live log footprint entry link
     new_log = db.DispatchLog(order_id=order.id, driver_name=driver_name)
     dbs.add(new_log)
     
-    # 2. Advance order operational pipeline state
     setattr(order, "status", db.OrderStatus.OUT_FOR_DELIVERY)
     dbs.commit()
     
@@ -163,8 +156,7 @@ def mark_order_delivered(receipt_token: str, dbs: Session = Depends(get_db)):
     if not log:
         raise HTTPException(status_code=400, detail="Dispatch configuration sequence error: Order was never assigned to a driver.")
 
-    # Mark completion timestamp records live
-    setattr(log, "delivered_at", datetime.utcnow())
+    setattr(log, "delivered_at", datetime.datetime.utcnow())
     setattr(order, "status", db.OrderStatus.COMPLETED)
     dbs.commit()
     
@@ -175,3 +167,23 @@ def mark_order_delivered(receipt_token: str, dbs: Session = Depends(get_db)):
         "completed_at": log.delivered_at
     }
 
+# ----------------- ADMIN GATED METRICS & DATA STREAMS -----------------
+
+@app.get("/admin/dashboard/transactions")
+def get_all_transactions(username: str = "client", is_manager: bool = Depends(verify_manager_access), dbs: Session = Depends(get_db)):
+    """A highly secure route that allows ONLY managers to pull financial data totals across departments."""
+    all_orders = dbs.query(db.Order).all()
+    gross_revenue = sum(o.total_price for o in all_orders)
+    return {
+        "access_granted": True,
+        "total_orders_processed": len(all_orders),
+        "gross_system_revenue": f"${gross_revenue:.2f}",
+        "detailed_ledger": [{
+            "receipt": o.receipt_token, 
+            "client": o.client_name, 
+            "total": o.total_price, 
+            "type": o.order_type,
+            "status": o.status,
+            "items_summary": ", ".join([i.product_name for i in o.items])
+        } for o in all_orders]
+    }
