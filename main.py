@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 import database as db
 import uuid
+from datetime import datetime
 
 app = FastAPI(title="Smart Restaurant Cloud ERP System")
 
@@ -119,3 +120,58 @@ def get_all_transactions(username: str = "client", is_manager: bool = Depends(ve
         "gross_system_revenue": f"${gross_revenue:.2f}",
         "detailed_ledger": [{"receipt": o.receipt_token, "client": o.client_name, "total": o.total_price, "type": o.order_type} for o in all_orders]
     }
+
+# ----------------- DISPATCH & DELIVERY TRACKING ENDPOINTS -----------------
+
+@app.post("/dispatch/assign/{receipt_token}")
+def assign_order_to_driver(receipt_token: str, driver_name: str, dbs: Session = Depends(get_db)):
+    """Logs when an order leaves the counter and hands tracking over to a specific delivery driver."""
+    order = dbs.query(db.Order).filter(db.Order.receipt_token == receipt_token).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
+    if order.order_type.value != db.OrderType.DELIVERY.value:
+        raise HTTPException(status_code=400, detail="Action error: This order is marked as Dine-In.")
+        
+    # Check if this order is already dispatched to prevent data overlap
+    existing_log = dbs.query(db.DispatchLog).filter(db.DispatchLog.order_id == order.id).first()
+    if existing_log:
+        return {"status": "ALREADY_DISPATCHED", "driver": existing_log.driver_name, "time": existing_log.dispatched_at}
+
+    # 1. Create a live log footprint entry link
+    new_log = db.DispatchLog(order_id=order.id, driver_name=driver_name)
+    dbs.add(new_log)
+    
+    # 2. Advance order operational pipeline state
+    setattr(order, "status", db.OrderStatus.OUT_FOR_DELIVERY)
+    dbs.commit()
+    
+    return {
+        "status": "DISPATCHED",
+        "receipt_id": order.receipt_token,
+        "assigned_driver": driver_name,
+        "dispatch_timestamp": new_log.dispatched_at
+    }
+
+@app.patch("/dispatch/complete/{receipt_token}")
+def mark_order_delivered(receipt_token: str, dbs: Session = Depends(get_db)):
+    """Logs the exact second a driver hands the meal box to the client, closing out the transaction ledger."""
+    order = dbs.query(db.Order).filter(db.Order.receipt_token == receipt_token).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not located.")
+        
+    log = dbs.query(db.DispatchLog).filter(db.DispatchLog.order_id == order.id).first()
+    if not log:
+        raise HTTPException(status_code=400, detail="Dispatch configuration sequence error: Order was never assigned to a driver.")
+
+    # Mark completion timestamp records live
+    setattr(log, "delivered_at", datetime.utcnow())
+    setattr(order, "status", db.OrderStatus.COMPLETED)
+    dbs.commit()
+    
+    return {
+        "status": "DELIVERED_SUCCESS",
+        "receipt_id": order.receipt_token,
+        "driver": log.driver_name,
+        "completed_at": log.delivered_at
+    }
+

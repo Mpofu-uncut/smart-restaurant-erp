@@ -3,13 +3,11 @@ from enum import Enum
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
-# Setup local cross-platform robust SQLite local file system engine database
 DATABASE_URL = "sqlite:///./restaurant_enterprise.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Operational Department Identity Enums
 class UserRole(str, Enum):
     CLIENT = "client"
     WAITER = "waiter"
@@ -39,7 +37,7 @@ class MenuProduct(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
     price = Column(Float, nullable=False)
-    is_available = Column(Integer, default=1) # 1 = True, 0 = False
+    is_available = Column(Integer, default=1)
 
 class Order(Base):
     __tablename__ = "orders"
@@ -49,10 +47,10 @@ class Order(Base):
     status = Column(SQLEnum(OrderStatus), default=OrderStatus.PENDING, nullable=False)
     total_price = Column(Float, default=0.0)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Structural Token code unifying Counter, Kitchen, Driver and Client receipt
     receipt_token = Column(String, unique=True, nullable=False)
+    
     items = relationship("OrderItem", back_populates="order")
+    dispatch_log = relationship("DispatchLog", back_populates="order", uselist=False)
 
 class OrderItem(Base):
     __tablename__ = "order_items"
@@ -62,6 +60,16 @@ class OrderItem(Base):
     quantity = Column(Integer, default=1)
     
     order = relationship("Order", back_populates="items")
+
+class DispatchLog(Base):
+    __tablename__ = "dispatch_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), unique=True, nullable=False)
+    driver_name = Column(String, nullable=False)
+    dispatched_at = Column(DateTime, default=datetime.utcnow)
+    delivered_at = Column(DateTime, nullable=True)
+
+    order = relationship("Order", back_populates="dispatch_log")
 
 def init_db():
     Base.metadata.create_all(bind=engine)
