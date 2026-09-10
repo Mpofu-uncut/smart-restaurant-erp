@@ -71,5 +71,11 @@ class DispatchLog(Base):
 
     order = relationship("Order", back_populates="dispatch_log")
 
+class Inventory(Base):
+    __tablename__ = "inventory"
+    id = Column(Integer, primary_key=True, index=True)
+    ingredient_name = Column(String, unique=True, nullable=False)
+    stock_qty = Column(Integer, default=100)
+
 def init_db():
     Base.metadata.create_all(bind=engine)

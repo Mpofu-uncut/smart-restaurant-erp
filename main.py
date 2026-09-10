@@ -1,20 +1,25 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import database as db
 import uuid
-import datetime
+from datetime import datetime
 
 app = FastAPI(title="Smart Restaurant Cloud ERP System")
 
-# Initialize database schemas on startup automatically
-db.init_db()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Mount HTML templates layout directory
+db.init_db()
 templates = Jinja2Templates(directory="templates")
 
-# DB Dependency link session
 def get_db():
     database = db.SessionLocal()
     try:
@@ -22,167 +27,97 @@ def get_db():
     finally:
         database.close()
 
-# Mock Security Check (In production, this decodes a secure JWT login token)
+@app.on_event("startup")
+def seed_inventory():
+    dbs = db.SessionLocal()
+    if dbs.query(db.Inventory).count() == 0:
+        initial_stock = {"Pizza": 20, "Burger": 30, "Fries": 50, "Soda": 100}
+        for name, qty in initial_stock.items():
+            dbs.add(db.Inventory(ingredient_name=name, stock_qty=qty))
+        dbs.commit()
+    dbs.close()
+
 def verify_manager_access(username: str = "admin"):
-    """Gatekeeper tracking system roles. Blocks anyone who isn't a manager/admin."""
     if username.lower() != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Access Denied: Administrative and Management credentials required."
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access Denied.")
     return True
 
 @app.get("/")
 def read_root():
-    return {"status": "ONLINE", "system": "Restaurant POS & ERP Engine Active"}
+    return {"status": "ONLINE"}
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def render_live_operations_board(request: Request):
-    """Brings up the multi-column synchronized graphical user interface dashboard web page."""
     return templates.TemplateResponse(request, "dashboard.html")
-
-
-
-
-# ----------------- ORDER PIPELINE ENDPOINTS -----------------
 
 @app.post("/orders/create", status_code=status.HTTP_201_CREATED)
 def place_new_order(client: str, o_type: db.OrderType, items: str, dbs: Session = Depends(get_db)):
-    """Receives an input order entry from a Client or Waiter and routes it to the database."""
     receipt_uid = f"REC-{uuid.uuid4().hex[:6].upper()}"
+    item_list = [i.strip() for i in items.split(",") if i.strip()]
     
+    for item_name in item_list:
+        stock_item = dbs.query(db.Inventory).filter(db.Inventory.ingredient_name == item_name).first()
+        if not stock_item or int(getattr(stock_item, "stock_qty", 0)) <= 0:
+            raise HTTPException(status_code=400, detail="Stockout or invalid item.")
+
     new_order = db.Order(client_name=client, order_type=o_type, receipt_token=receipt_uid, total_price=0.0)
     dbs.add(new_order)
     dbs.commit()
     dbs.refresh(new_order)
     
     calc_total = 0.0
-    item_list = [i.strip() for i in items.split(",") if i.strip()]
-    
     for item_name in item_list:
+        stock_item = dbs.query(db.Inventory).filter(db.Inventory.ingredient_name == item_name).first()
+        if stock_item:
+            setattr(stock_item, "stock_qty", int(getattr(stock_item, "stock_qty", 0)) - 1)
+        
         order_item = db.OrderItem(order_id=new_order.id, product_name=item_name, quantity=1)
-        calc_total += 12.50  # Default $12.50 per individual dish item
+        calc_total += 12.50
         dbs.add(order_item)
         
     dbs.commit()
     setattr(new_order, "total_price", calc_total)
     dbs.commit()
     dbs.refresh(new_order)
-    
-    return {
-        "message": "Order successfully routed to Kitchen Department!",
-        "receipt_id": new_order.receipt_token,
-        "client": new_order.client_name,
-        "type": new_order.order_type,
-        "status": new_order.status,
-        "total_bill": f"${new_order.total_price:.2f}"
-    }
+    return {"status": "SUCCESS", "receipt_id": new_order.receipt_token}
 
-@app.get("/orders/{receipt_token}/receipt")
-def generate_printable_receipt(receipt_token: str, dbs: Session = Depends(get_db)):
-    """Generates a beautifully formatted terminal/printer receipt text summary for clients and dispatchers."""
-    order = dbs.query(db.Order).filter(db.Order.receipt_token == receipt_token).first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Receipt verification token not found.")
-    
-    border = "========================================\n"
-    header = "       MPOFU ENTERPRISE RESTAURANT      \n"
-    meta_info = f" Receipt: {order.receipt_token}\n Type: {order.order_type.upper()} | Status: {order.status.upper()}\n Client: {order.client_name}\n"
-    item_header = "----------------------------------------\n Item               Qty       Est. Price\n----------------------------------------\n"
-    
-    items_body = ""
-    for item in order.items:
-        items_body += f" {item.product_name:<18} {item.quantity:<9} ${12.50 * item.quantity:.2f}\n"
-        
-    footer = f"----------------------------------------\n TOTAL AMOUNT DUE:           ${order.total_price:.2f}\n"
-    thank_you = "      THANK YOU FOR DINING WITH US!     \n"
-    
-    receipt_raw_text = border + header + border + meta_info + item_header + items_body + footer + border + thank_you + border
-    return {"receipt_token": order.receipt_token, "printable_ascii_receipt": receipt_raw_text}
-
-@app.get("/kitchen/queue")
-def get_kitchen_queue(dbs: Session = Depends(get_db)):
-    """Allows the Kitchen monitor panel to pull active orders waiting for preparation."""
-    active_orders = dbs.query(db.Order).filter(db.Order.status == db.OrderStatus.PENDING).all()
-    return [{"id": o.id, "client": o.client_name, "token": o.receipt_token, "time": o.created_at} for o in active_orders]
+@app.get("/inventory/status")
+def view_stock_levels(dbs: Session = Depends(get_db)):
+    stock = dbs.query(db.Inventory).all()
+    return {item.ingredient_name: item.stock_qty for item in stock}
 
 @app.patch("/orders/{receipt_token}/update-status")
 def update_order_state(receipt_token: str, new_status: str, dbs: Session = Depends(get_db)):
-    """Allows Driver Dispatch, Managers, or Kitchen staff to advance the state step safely."""
     target_order = dbs.query(db.Order).filter(db.Order.receipt_token == receipt_token).first()
-    if not target_order:
-        raise HTTPException(status_code=404, detail="Receipt verification failed.")
-        
-    setattr(target_order, "status", new_status)
-    dbs.commit()
-    return {"status": "SUCCESS", "receipt": receipt_token, "new_operational_state": target_order.status}
-
-# ----------------- DISPATCH & DELIVERY TRACKING ENDPOINTS -----------------
+    if target_order:
+        setattr(target_order, "status", new_status)
+        dbs.commit()
+    return {"status": "SUCCESS"}
 
 @app.post("/dispatch/assign/{receipt_token}")
 def assign_order_to_driver(receipt_token: str, driver_name: str, dbs: Session = Depends(get_db)):
-    """Logs when an order leaves the counter and hands tracking over to a specific delivery driver."""
     order = dbs.query(db.Order).filter(db.Order.receipt_token == receipt_token).first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found.")
-    if order.order_type.value != db.OrderType.DELIVERY.value:
-        raise HTTPException(status_code=400, detail="Action error: This order is marked as Dine-In.")
-        
-    existing_log = dbs.query(db.DispatchLog).filter(db.DispatchLog.order_id == order.id).first()
-    if existing_log:
-        return {"status": "ALREADY_DISPATCHED", "driver": existing_log.driver_name, "time": existing_log.dispatched_at}
-
+    if not order or getattr(order, "order_type", "") != "delivery":
+        raise HTTPException(status_code=400, detail="Not a delivery order.")
+    
     new_log = db.DispatchLog(order_id=order.id, driver_name=driver_name)
     dbs.add(new_log)
-    
     setattr(order, "status", db.OrderStatus.OUT_FOR_DELIVERY)
     dbs.commit()
-    
-    return {
-        "status": "DISPATCHED",
-        "receipt_id": order.receipt_token,
-        "assigned_driver": driver_name,
-        "dispatch_timestamp": new_log.dispatched_at
-    }
-
-@app.patch("/dispatch/complete/{receipt_token}")
-def mark_order_delivered(receipt_token: str, dbs: Session = Depends(get_db)):
-    """Logs the exact second a driver hands the meal box to the client, closing out the transaction ledger."""
-    order = dbs.query(db.Order).filter(db.Order.receipt_token == receipt_token).first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not located.")
-        
-    log = dbs.query(db.DispatchLog).filter(db.DispatchLog.order_id == order.id).first()
-    if not log:
-        raise HTTPException(status_code=400, detail="Dispatch configuration sequence error: Order was never assigned to a driver.")
-
-    setattr(log, "delivered_at", datetime.datetime.utcnow())
-    setattr(order, "status", db.OrderStatus.COMPLETED)
-    dbs.commit()
-    
-    return {
-        "status": "DELIVERED_SUCCESS",
-        "receipt_id": order.receipt_token,
-        "driver": log.driver_name,
-        "completed_at": log.delivered_at
-    }
-
-# ----------------- ADMIN GATED METRICS & DATA STREAMS -----------------
+    return {"status": "DISPATCHED"}
 
 @app.get("/admin/dashboard/transactions")
-def get_all_transactions(username: str = "client", is_manager: bool = Depends(verify_manager_access), dbs: Session = Depends(get_db)):
-    """A highly secure route that allows ONLY managers to pull financial data totals across departments."""
+def get_all_transactions(username: str = "admin", is_manager: bool = Depends(verify_manager_access), dbs: Session = Depends(get_db)):
     all_orders = dbs.query(db.Order).all()
     gross_revenue = sum(o.total_price for o in all_orders)
     return {
         "access_granted": True,
-        "total_orders_processed": len(all_orders),
         "gross_system_revenue": f"${gross_revenue:.2f}",
         "detailed_ledger": [{
-            "receipt": o.receipt_token, 
-            "client": o.client_name, 
-            "total": o.total_price, 
-            "type": o.order_type,
+            "receipt_id": o.receipt_token, 
+            "client_name": o.client_name, 
+            "total_bill": o.total_price, 
+            "order_type": o.order_type,
             "status": o.status,
             "items_summary": ", ".join([i.product_name for i in o.items])
         } for o in all_orders]
