@@ -122,3 +122,33 @@ def get_all_transactions(username: str = "admin", is_manager: bool = Depends(ver
             "items_summary": ", ".join([i.product_name for i in o.items])
         } for o in all_orders]
     }
+
+# ----------------- KITCHEN CHEF PRINTING UTILITY -----------------
+
+@app.get("/kitchen/tickets/{receipt_token}/print")
+def generate_kitchen_chef_ticket(receipt_token: str, dbs: Session = Depends(get_db)):
+    """Generates a clean, price-free text block ticket optimized for thermal kitchen counter printers."""
+    order = dbs.query(db.Order).filter(db.Order.receipt_token == receipt_token).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Operational error: Target tracking ticket not found.")
+    
+    # 1. Format date text cleanly
+    time_str = order.created_at.strftime("%Y-%m-%d %H:%M:%S")
+    
+    # 2. Construct Chef-Optimized Text Block Layout
+    border = "****************************************\n"
+    header = "          KITCHEN PRODUCTION TICKET     \n"
+    meta_info = f" ORDER REF: {order.receipt_token}\n DATE/TIME: {time_str}\n SERVICE:   {order.order_type.upper()}\n CLIENT:    {order.client_name}\n"
+    item_header = "----------------------------------------\n ITEM NAME                  QUANTITY     \n----------------------------------------\n"
+    
+    items_body = ""
+    for item in order.items:
+        items_body += f" {item.product_name:<26} x{item.quantity:<10}\n"
+        
+    footer = "----------------------------------------\n STATUS: [PENDING PREPARATION]\n"
+    
+    kitchen_ascii_ticket = border + header + border + meta_info + item_header + items_body + footer + border
+    return {
+        "receipt_id": order.receipt_token,
+        "chef_print_layout": kitchen_ascii_ticket
+    }
