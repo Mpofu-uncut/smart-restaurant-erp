@@ -7,6 +7,13 @@
         body { background-color: #030712; color: #f3f4f6; font-family: system-ui, sans-serif; margin: 0; padding: 0; }
         header { background-color: #111827; border-bottom: 1px solid #1f2937; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; }
         header h1 { color: #3b82f6; margin: 0; font-size: 24px; }
+        
+        /* New Live Inventory Warehouse Ticker Styling */
+        .inventory-banner { display: flex; gap: 20px; padding: 15px 40px; background-color: #0f172a; border-bottom: 1px solid #334155; overflow-x: auto; font-family: monospace; }
+        .inv-pill { background-color: #1e293b; border: 1px solid #475569; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: bold; display: flex; gap: 10px; align-items: center; }
+        .inv-pill.warning { border-color: #f97316; color: #f97316; animation: pulse 2s infinite; }
+        .inv-pill.critical { border-color: #ef4444; color: #ef4444; background-color: rgba(239, 68, 68, 0.1); animation: blink 1s infinite; }
+        
         .main-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; padding: 30px; max-width: 1600px; margin: 0 auto; }
         section { background-color: #1f2937; border: 1px solid #374151; border-radius: 12px; padding: 24px; }
         .order-card { background-color: #111827; border: 1px solid #374151; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
@@ -18,6 +25,9 @@
         .revenue-display { background-color: #111827; border: 1px solid #374151; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 24px; }
         .revenue-display h3 { margin: 0; font-size: 32px; color: #10b981; font-family: monospace; }
         .ledger-row { background-color: #111827; border: 1px solid #1f2937; padding: 10px; border-radius: 4px; display: flex; justify-content: space-between; font-family: monospace; font-size: 12px; margin-bottom: 8px; }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        @keyframes blink { 0%, 100% { border-color: #ef4444; } 50% { border-color: transparent; } }
     </style>
 </head>
 <body>
@@ -25,9 +35,15 @@
         <div><h1>MPOFU ENTERPRISE RESTAURANT</h1></div>
         <div style="color: #10b981; font-family: monospace;">● SERVER ONLINE</div>
     </header>
+
+    <!-- Visual Stock Alert Bar Component -->
+    <div class="inventory-banner" id="live-inventory-bar">
+        <div style="color: #64748b; font-size: 13px;">Syncing stock depletion levels...</div>
+    </div>
+
     <div class="main-container">
         <section>
-            <h2 style="color: #f97316; border-bottom: 1px solid #374151; padding-bottom: 10px;" id="kitchen-count">🍳 KITCHEN PREPARATION</h2>
+            <h2 style="color: #f97316; border-bottom: 1px solid #374151; padding-bottom: 10px;" id="kitchen-count">🍳 KITCHEN PREPARATION (0)</h2>
             <div id="kitchen-cards-container"></div>
         </section>
         <section>
@@ -40,12 +56,42 @@
             <div id="admin-ledger-container"></div>
         </section>
     </div>
+
     <script>
         const transitTrackers = {};
         async function fetchSystemData() {
             try {
+                // 1. Pull dynamic transaction ledger lines
                 const response = await fetch('/admin/dashboard/transactions?username=admin');
                 const data = await response.json();
+
+                // 2. Fetch raw ingredient quantities side-by-side (Parallel Data Sync)
+                const invResponse = await fetch('/inventory/status');
+                const invData = await invResponse.json();
+
+                // Render Live Stock Tracker Pill Badges
+                const invBar = document.getElementById('live-inventory-bar');
+                if (invBar && invData) {
+                    invBar.innerHTML = "";
+                    for (const [ingredient, qty] of Object.entries(invData)) {
+                        const pill = document.createElement('div');
+                        let badgeClass = "inv-pill";
+                        let statusTxt = `QTY: ${qty}`;
+                        
+                        if (qty === 0) {
+                            badgeClass += " critical";
+                            statusTxt = "❌ OUT OF STOCK";
+                        } else if (qty <= 5) {
+                            badgeClass += " warning";
+                            statusTxt = "⚠️ LOW STOCK";
+                        }
+                        
+                        pill.className = badgeClass;
+                        pill.innerHTML = `<span>${ingredient.toUpperCase()}</span> <span style="font-family:sans-serif; opacity:0.8;">|</span> <span>${statusTxt}</span>`;
+                        invBar.appendChild(pill);
+                    }
+                }
+                
                 if (data && data.detailed_ledger) {
                     document.getElementById('gross-revenue').innerText = data.gross_system_revenue;
                     const kitchenContainer = document.getElementById('kitchen-cards-container');
