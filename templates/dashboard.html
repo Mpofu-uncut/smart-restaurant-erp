@@ -2,92 +2,317 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Mpofu Enterprise - Live Operations ERP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mpofu Operations ERP - Live Operations Board</title>
     <style>
-        body { background-color: #030712; color: #f3f4f6; font-family: system-ui, sans-serif; margin: 0; padding: 0; }
-        header { background-color: #111827; border-bottom: 1px solid #1f2937; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; }
-        header h1 { color: #3b82f6; margin: 0; font-size: 24px; }
-        
-        /* New Live Inventory Warehouse Ticker Styling */
-        .inventory-banner { display: flex; gap: 20px; padding: 15px 40px; background-color: #0f172a; border-bottom: 1px solid #334155; overflow-x: auto; font-family: monospace; }
-        .inv-pill { background-color: #1e293b; border: 1px solid #475569; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: bold; display: flex; gap: 10px; align-items: center; }
-        .inv-pill.warning { border-color: #f97316; color: #f97316; animation: pulse 2s infinite; }
-        .inv-pill.critical { border-color: #ef4444; color: #ef4444; background-color: rgba(239, 68, 68, 0.1); animation: blink 1s infinite; }
-        
-        .main-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; padding: 30px; max-width: 1600px; margin: 0 auto; }
-        section { background-color: #1f2937; border: 1px solid #374151; border-radius: 12px; padding: 24px; }
-        .order-card { background-color: #111827; border: 1px solid #374151; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
-        .transit-timer-box { background-color: #1e293b; border: 1px solid #334155; padding: 8px; border-radius: 6px; font-family: monospace; color: #60a5fa; display: flex; justify-content: space-between; margin-top: 10px; }
-        .action-btn { width: 100%; padding: 10px; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
-        .btn-kitchen { background-color: #ea580c; }
-        .btn-dispatch { background-color: #2563eb; }
-        .btn-complete { background-color: #059669; }
-        .revenue-display { background-color: #111827; border: 1px solid #374151; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 24px; }
-        .revenue-display h3 { margin: 0; font-size: 32px; color: #10b981; font-family: monospace; }
-        .ledger-row { background-color: #111827; border: 1px solid #1f2937; padding: 10px; border-radius: 4px; display: flex; justify-content: space-between; font-family: monospace; font-size: 12px; margin-bottom: 8px; }
+        /* Core Dark Layout Structure */
+        body {
+            background-color: #030712;
+            color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
 
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-        @keyframes blink { 0%, 100% { border-color: #ef4444; } 50% { border-color: transparent; } }
+        /* Top Header Panel */
+        header {
+            background-color: #0b0f19;
+            border-bottom: 1px solid #1e293b;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-box {
+            height: 36px;
+            width: 36px;
+            background: linear-gradient(135deg, #2563eb, #4f46e5);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 16px;
+            color: white;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 800;
+            color: #f8fafc;
+        }
+        header p {
+            margin: 2px 0 0 0;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+        .status-badge {
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            font-family: monospace;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 6px;
+        }
+
+        /* Live Inventory Bar */
+        .inventory-banner {
+            background-color: #070b14;
+            border-bottom: 1px solid #1e293b;
+            padding: 12px 32px;
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+        }
+        .inv-pill {
+            background-color: #111827;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #cbd5e1;
+        }
+        .inv-pill.warning { border-color: #f97316; color: #fb923c; }
+        .inv-pill.critical { border-color: #ef4444; color: #f87171; }
+
+        /* The 3-Column Layout Workspace */
+        .main-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            padding: 32px;
+            max-width: 1700px;
+            margin: 0 auto;
+        }
+        section {
+            background-color: #0b0f19;
+            border: 1px solid #1e293b;
+            border-radius: 14px;
+            padding: 20px;
+            min-height: 500px;
+        }
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #1e293b;
+            padding-bottom: 12px;
+        }
+        .column-title {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #e2e8f0;
+        }
+        .column-badge {
+            font-family: monospace;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .col-kitchen .column-badge { color: #f97316; background-color: rgba(249,115,22,0.1); }
+        .col-dispatch .column-badge { color: #3b82f6; background-color: rgba(59,130,246,0.1); }
+        .col-ledger .column-badge { color: #10b981; background-color: rgba(16,185,129,0.1); }
+
+        .cards-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Interactive Ticket Cards Layout */
+        .order-card {
+            background-color: #111827;
+            border: 1px solid #1e293b;
+            border-radius: 10px;
+            padding: 16px;
+        }
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .token-lbl {
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 12px;
+            color: #3b82f6;
+        }
+        .type-tag {
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            background-color: #1e293b;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #94a3b8;
+        }
+        .client-name {
+            margin: 0 0 4px 0;
+            font-size: 15px;
+            font-weight: 700;
+        }
+        .items-desc {
+            font-size: 12px;
+            color: #94a3b8;
+            margin: 0 0 12px 0;
+        }
+
+        /* Action Controls Buttons */
+        .action-btn {
+            width: 100%;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            font-weight: 600;
+            font-size: 11px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        .btn-kitchen { background-color: #ea580c; }
+        .btn-kitchen:hover { background-color: #f97316; }
+        .btn-dispatch { background-color: #2563eb; }
+        .btn-dispatch:hover { background-color: #3b82f6; }
+        .btn-complete { background-color: #16a34a; }
+        .btn-complete:hover { background-color: #10b981; }
+
+        .transit-timer-box {
+            background-color: #030712;
+            border: 1px solid #1e293b;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #60a5fa;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Financial Ledger Box */
+        .revenue-card {
+            background-color: #070b14;
+            border: 1px solid #1e293b;
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .revenue-card p {
+            margin: 0 0 4px 0;
+            font-size: 10px;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+        .revenue-card h3 {
+            margin: 0;
+            font-size: 28px;
+            color: #10b981;
+            font-family: monospace;
+        }
+        .ledger-row {
+            background-color: #111827;
+            border: 1px solid #1e293b;
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            font-family: monospace;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
+
+    <!-- Header Panel Component -->
     <header>
-        <div><h1>MPOFU ENTERPRISE RESTAURANT</h1></div>
-        <div style="color: #10b981; font-family: monospace;">● SERVER ONLINE</div>
+        <div class="brand-container">
+            <div class="logo-box">M</div>
+            <div>
+                <h1>MPOFU OPERATIONS ERP</h1>
+                <p>Premium System Layout Control</p>
+            </div>
+        </div>
+        <div class="status-badge">● ACTIVE CORE CONNECTED</div>
     </header>
 
-    <!-- Visual Stock Alert Bar Component -->
-    <div class="inventory-banner" id="live-inventory-bar">
-        <div style="color: #64748b; font-size: 13px;">Syncing stock depletion levels...</div>
-    </div>
+    <!-- Live Inventory Status Component Bar -->
+    <div class="inventory-banner" id="live-inventory-bar"></div>
 
+    <!-- The 3-Column Core Framework Layout Containers -->
     <div class="main-container">
-        <section>
-            <h2 style="color: #f97316; border-bottom: 1px solid #374151; padding-bottom: 10px;" id="kitchen-count">🍳 KITCHEN PREPARATION (0)</h2>
-            <div id="kitchen-cards-container"></div>
+        
+        <!-- COLUMN 1: KITCHEN LINE -->
+        <section class="col-kitchen">
+            <div class="column-header">
+                <h2 class="column-title">🍳 Kitchen Line</h2>
+                <span class="column-badge" id="kitchen-count">0 Tickets</span>
+            </div>
+            <div id="kitchen-cards-container" class="cards-list"></div>
         </section>
-        <section>
-            <h2 style="color: #3b82f6; border-bottom: 1px solid #374151; padding-bottom: 10px;">🚚 COURIER DISPATCH DESK</h2>
-            <div id="dispatch-cards-container"></div>
+
+        <!-- COLUMN 2: COURIER DISPATCH -->
+        <section class="col-dispatch">
+            <div class="column-header">
+                <h2 class="column-title">🚚 Courier Logistics</h2>
+                <span class="column-badge">Transit Logs</span>
+            </div>
+            <div id="dispatch-cards-container" class="cards-list"></div>
         </section>
-        <section>
-            <h2 style="color: #10b981; border-bottom: 1px solid #374151; padding-bottom: 10px;">📊 FINANCIAL LEDGER</h2>
-            <div class="revenue-display"><p style="margin:0 0 5px 0; color:#9ca3af; font-size:12px;">GROSS REVENUE</p><h3 id="gross-revenue">$0.00</h3></div>
-            <div id="admin-ledger-container"></div>
+
+        <!-- COLUMN 3: FINANCIAL LEDGER -->
+        <section class="col-ledger">
+            <div class="column-header">
+                <h2 class="column-title">📊 Financial Ledger</h2>
+                <span class="column-badge">Live Streams</span>
+            </div>
+            <div class="revenue-card">
+                <p>Gross Cumulative Revenue</p>
+                <h3 id="gross-revenue">$0.00</h3>
+            </div>
+            <div style="font-size: 10px; text-transform: uppercase; color: #94a3b8; margin-bottom: 10px; font-weight: bold;">System Transactions Ledger</div>
+            <div id="admin-ledger-container" style="max-height: 400px; overflow-y: auto;"></div>
         </section>
+
     </div>
 
     <script>
         const transitTrackers = {};
+
         async function fetchSystemData() {
             try {
-                // 1. Pull dynamic transaction ledger lines
                 const response = await fetch('/admin/dashboard/transactions?username=admin');
                 const data = await response.json();
-
-                // 2. Fetch raw ingredient quantities side-by-side (Parallel Data Sync)
                 const invResponse = await fetch('/inventory/status');
                 const invData = await invResponse.json();
 
-                // Render Live Stock Tracker Pill Badges
+                // 1. Build Stock Indicators Bar Component
                 const invBar = document.getElementById('live-inventory-bar');
                 if (invBar && invData) {
                     invBar.innerHTML = "";
                     for (const [ingredient, qty] of Object.entries(invData)) {
                         const pill = document.createElement('div');
                         let badgeClass = "inv-pill";
-                        let statusTxt = `QTY: ${qty}`;
-                        
-                        if (qty === 0) {
-                            badgeClass += " critical";
-                            statusTxt = "❌ OUT OF STOCK";
-                        } else if (qty <= 5) {
-                            badgeClass += " warning";
-                            statusTxt = "⚠️ LOW STOCK";
-                        }
-                        
+                        let statusTxt = `Stock: ${qty}`;
+
+                        if (qty === 0) { badgeClass += " critical"; statusTxt = "OUT OF STOCK"; }
+                        else if (qty <= 5) { badgeClass += " warning"; statusTxt = "LOW STOCK"; }
                         pill.className = badgeClass;
-                        pill.innerHTML = `<span>${ingredient.toUpperCase()}</span> <span style="font-family:sans-serif; opacity:0.8;">|</span> <span>${statusTxt}</span>`;
+                        pill.innerHTML = `<span>${ingredient.toUpperCase()}</span> | <strong>${statusTxt}</strong>`;
                         invBar.appendChild(pill);
                     }
                 }
@@ -97,45 +322,64 @@
                     const kitchenContainer = document.getElementById('kitchen-cards-container');
                     const dispatchContainer = document.getElementById('dispatch-cards-container');
                     const ledgerContainer = document.getElementById('admin-ledger-container');
-                    kitchenContainer.innerHTML = ""; dispatchContainer.innerHTML = ""; ledgerContainer.innerHTML = "";
+                    kitchenContainer.innerHTML = "";
+                    dispatchContainer.innerHTML = "";
+                    ledgerContainer.innerHTML = "";
                     let kitchenCount = 0;
-
+                    
                     data.detailed_ledger.forEach(order => {
                         const logRow = document.createElement('div');
                         logRow.className = "ledger-row";
-                        logRow.innerHTML = `<div><span style="color:#3b82f6;">${order.receipt_id}</span> | ${order.client_name}</div><div style="color:#10b981;">$${order.total_bill.toFixed(2)}</div>`;
+                        logRow.innerHTML = `<div><span style="color:#3b82f6; font-weight:bold;">${order.receipt_id}</span> | ${order.client_name}</div><div style="color:#10b981; font-weight:bold;">$${order.total_bill.toFixed(2)}</div>`;
                         ledgerContainer.appendChild(logRow);
-
+                        
                         if (order.status === "pending" || order.status === "in_kitchen") {
                             kitchenCount++;
                             const card = document.createElement('div');
                             card.className = "order-card";
-                            card.innerHTML = `<strong>${order.receipt_id}</strong> [${order.order_type}]<h3>${order.client_name}</h3><p style="color:#9ca3af; font-size:13px;">${order.items_summary}</p><button onclick="advanceOrderStatus('${order.receipt_id}', 'ready_for_dispatch')" class="action-btn btn-kitchen">Mark Food Ready</button>`;
+                            card.innerHTML = `<div class="card-top"> <span class="token-lbl">${order.receipt_id}</span> <span class="type-tag">${order.type || order.order_type}</span> </div> <h3 class="client-name">${order.client_name}</h3> <p class="items-desc">Ordered: ${order.items_summary}</p> <button onclick="advanceOrderStatus('${order.receipt_id}', 'ready_for_dispatch')" class="action-btn btn-kitchen">Mark Food Ready</button>`;
                             kitchenContainer.appendChild(card);
                         }
+                        
                         if (order.status === "ready_for_dispatch" || order.status === "out_for_delivery") {
                             const card = document.createElement('div');
                             card.className = "order-card";
-                            let btnHtml = ""; let trackerHtml = "";
+                            let btnHtml = "";
+                            let trackerHtml = "";
+                            
                             if (order.status === "ready_for_dispatch") {
                                 btnHtml = `<button onclick="assignDriver('${order.receipt_id}')" class="action-btn btn-dispatch">Assign Driver Alex</button>`;
                             } else {
-                                if (!transitTrackers[order.receipt_id]) transitTrackers[order.receipt_id] = { mins: 15, miles: 4.2 };
-                                else if (transitTrackers[order.receipt_id].mins > 1) { transitTrackers[order.receipt_id].mins -= 0.2; transitTrackers[order.receipt_id].miles -= 0.05; }
-                                trackerHtml = `<div class="transit-timer-box"><span>⏱ ETA: ${Math.ceil(transitTrackers[order.receipt_id].mins)} Mins</span><span>📍 DIST: ${Math.max(transitTrackers[order.receipt_id].miles, 0.1).toFixed(2)} Mi</span></div>`;
-                                btnHtml = `<button onclick="advanceOrderStatus('${order.receipt_id}', 'completed')" class="action-btn btn-complete">Confirm Handover</button>`;
+                                if (!transitTrackers[order.receipt_id]) {
+                                    transitTrackers[order.receipt_id] = { mins: 15, miles: 4.2 };
+                                } else if (transitTrackers[order.receipt_id].mins > 1) {
+                                    transitTrackers[order.receipt_id].mins -= 0.2;
+                                    transitTrackers[order.receipt_id].miles -= 0.05;
+                                }
+                                trackerHtml = `<div class="transit-timer-box"> <span>⏱ ${Math.ceil(transitTrackers[order.receipt_id].mins)} Mins</span> <span>📍 ${Math.max(transitTrackers[order.receipt_id].miles, 0.1).toFixed(2)} Mi</span> </div>`;
+                                btnHtml = `<button onclick="advanceOrderStatus('${order.receipt_id}', 'completed')" class="action-btn btn-complete">Confirm Delivery Dropoff</button>`;
                             }
-                            card.innerHTML = `<strong>${order.receipt_id}</strong><h3 style="margin:5px 0;">${order.client_name}</h3>${trackerHtml}${btnHtml}`;
+                            
+                            card.innerHTML = `<div class="card-top"> <span class="token-lbl">${order.receipt_id}</span> <span class="type-tag">${order.status.replace(/_/g, ' ')}</span> </div> <h3 class="client-name">${order.client_name}</h3> ${trackerHtml}${btnHtml}`;
                             dispatchContainer.appendChild(card);
                         }
                     });
-                    document.getElementById('kitchen-count').innerText = `🍳 KITCHEN PREPARATION (${kitchenCount})`;
+                    document.getElementById('kitchen-count').innerText = `Kitchen Line (${kitchenCount})`;
                 }
-            } catch (err) { console.error(err); }
+            } catch (err) {
+                console.error(err);
+            }
         }
-        async function advanceOrderStatus(t, s) { await fetch(`/orders/${t}/update-status?new_status=${s}`, { method: 'PATCH' }); fetchSystemData(); }
-        async function assignDriver(t) { await fetch(`/dispatch/assign/${t}?driver_name=Alex`, { method: 'POST' }); fetchSystemData(); }
-        setInterval(fetchSystemData, 2000); window.onload = fetchSystemData;
-    </script>
-</body>
-</html>
+        
+        async function advanceOrderStatus(t, s) {
+            await fetch(`/orders/${t}/update-status?new_status=${s}`, { method: 'PATCH' });
+            fetchSystemData();
+        }
+        
+        async function assignDriver(t) {
+            await fetch(`/dispatch/assign/${t}?driver_name=Alex`, { method: 'POST' });
+            fetchSystemData();
+        }
+        
+        setInterval(fetchSystemData, 2000);
+        window.onload = fetchSystemData;
